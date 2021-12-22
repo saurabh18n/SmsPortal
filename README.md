@@ -1,4 +1,6 @@
-# Install HOW TO
+# Send and receive SMS from portal
+This application can be used to send and receive message with flowroute API.
+## Install HOW TO
 1. ```cd /usr/src/```
 2. ```git clone https://github.com/saurabh18n/SmsPortal```
 3. ```cd fusionpbx-apps/; cp -R sms /var/www/fusionpbx/app/```
