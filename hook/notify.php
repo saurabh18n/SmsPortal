@@ -1,6 +1,8 @@
 <?php
 include "../root.php";
 require_once "resources/require.php";
+require_once "resources/check_auth.php";
+require_once "resources/paging.php";
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $messid =  $_REQUEST["messid"];
@@ -34,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }else{
     http_response_code(400);
-    echo "bad request";
+    echo "bad request ";
     writeError("Notify-> Invalid Request from ".get_client_ip());
 }
 

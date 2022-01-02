@@ -1,0 +1,102 @@
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    height: calc(100vh - 361px);
+    max-height: calc(100vh - 361px);
+}
+
+.chat-message-left,
+.chat-message-right {
+    display: flex;
+    flex-shrink: 0
+}
+
+.chat-message-left {
+    margin-right: auto;
+}
+
+.chat-message-right {
+    flex-direction: row-reverse;
+    margin-left: auto
+}
+.py-3 {
+    padding-top: 1rem!important;
+    padding-bottom: 1rem!important;
+}
+.px-4 {
+    padding-right: 1.5rem!important;
+    padding-left: 1.5rem!important;
+}
+.flex-grow-0 {
+    flex-grow: 0!important;
+}
+.border-top {
+    border-top: 1px solid #dee2e6!important;
+}
+#contact-list{
+    margin: 0px;
+    padding:0px ;
+    height: calc(100vh - 361px);
+    max-height: calc(100vh - 361px);
+}
+.list-group-item {
+    cursor:pointer;
+    user-select: none;
+    padding:10px 10px 10px 5px;
+    border-left: solid 5px white !important;
+}
+
+.list-group-item:hover {
+     background-color: rgb(231, 231, 231) !important;
+}
+
+
+.list-group-item{
+    border-left: solid 5px white !important;
+}
+.list-group-item.active{
+      border-left: solid 5px blue !important;
+      background-color: rgb(168, 164, 164) !important;
+}
+
+.list-number{
+    pointer-events: none;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+.list-time{
+    pointer-events: none;
+}
+
+.list-text{
+    pointer-events: none;
+}
+
+.message-number{
+
+     font-size: 1.2rem;
+}
+.message-text{
+    font-size: 1rem;
+}
+
+
+.bg-left{
+    background-color: rgb(244, 244, 252);
+}
+.bg-right{
+    background-color: rgb(203, 233, 186);
+}
+
+.pill-text{
+     font-size: 0.9rem !important;
+}
+
+#load-more{
+    cursor: pointer;
+}
+
+#load-more:hover{
+    box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.1);
+}

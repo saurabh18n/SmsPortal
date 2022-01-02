@@ -17,7 +17,7 @@ $apps[$x]['menu'][0]['title']['he'] = "";
 $apps[$x]['menu'][0]['uuid'] = "d4278820-1d33-11e6-b6ba-3e1d05defe78";
 $apps[$x]['menu'][0]['parent_uuid'] = "fd29e39c-c936-f5fc-8e2b-611681b266b5";
 $apps[$x]['menu'][0]['category'] = "internal";
-$apps[$x]['menu'][0]['path'] = "/app/smsportal/sms.php";
+$apps[$x]['menu'][0]['path'] = "/app/smsportal/inbox.php";
 $apps[$x]['menu'][0]['groups'][] = "admin";
 $apps[$x]['menu'][0]['groups'][] = "superadmin";
 

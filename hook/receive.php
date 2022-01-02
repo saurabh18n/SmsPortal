@@ -2,22 +2,28 @@
 include "../root.php";
 require_once "resources/require.php";
 
+date_default_timezone_set('Asia/Kolkata');
+
+ob_end_clean();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $postData = json_decode(file_get_contents('php://input'), true);
-    http_response_code(200);
-    echo "OK";
+    writeError("New message-> from ".get_client_ip()." ".json_encode( $postData));
+    //print_r( $postData);
+    //if($postData['data']['type']=='')
     header('Content-type: application/json');
+
+    //Putting message in DB
         $now = date('Y-m-d H:i:s');
         $from = $postData["from"];
         $to = $postData["to"];
         $message = $postData["body"];
-        if(isset($from,$to,$message)){       
+        if(isset($from,$to,$message)){   
+            http_response_code(200);
+            echo "OK";    
             //Message data row
             $MessageDataRow['message_uuid'] = uuid();
             $MessageDataRow['message_domain'] = $domain_uuid;
             $MessageDataRow['message_start_stamp'] = $now;
-            $MessageDataRow['message_sent'] = $now;
-            $MessageDataRow['message_delivered'] = $now;
             $MessageDataRow['message_from_number'] = "+".$from;
             $MessageDataRow['message_to_number'] = "+".$to;
             $MessageDataRow['message_text'] = $message;
@@ -30,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $database->fields =$MessageDataRow;
             $database->add();
         }else{
+            echo 'Error';
             writeError("Receive-> Invalid Request from ".get_client_ip()." ".json_encode( $postData));
         }
 }else{
@@ -37,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     echo "bad request";
     writeError("Receive-> GET Request from ".get_client_ip());
 }
+exit;
+
 
 function writeError($text){
     $ErrorRow['error_uuid'] = uuid();

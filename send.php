@@ -9,7 +9,7 @@
 include "root.php";
 require_once "resources/require.php";
 require_once "resources/check_auth.php";
-if (permission_exists('sms_send')) {
+if (permission_exists('sms_view')) { // Shooud be changed to sms send 
 	//access granted
 } else {
 	echo "access denied";
@@ -21,107 +21,105 @@ $language = new text;
 $text = $language->get();
 
 //get the http values and set them as variables
-
+$user_uuid = $_SESSION['user_uuid'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-	ob_end_clean();  // cleaning Fusionpbx imports outputs.
-	//Getting setting values
-	$username = $_SESSION["sms_portal"]["api"]["api_user_name"];
-	$password = $_SESSION["sms_portal"]["api"]["api_user_password"];
-	$fromnumber =  $_SESSION["sms_portal"]["api"]["api_from_number"];
-	$url = $_SESSION["sms_portal"]["api"]["api_url"];
-	// $username = "sjsjdfsdfsdfa";
-	// $password = "kkhdsfhkdshkdsgdfg";
-	// $fromnumber =  "+17975943534";
-	// $url = "https://api.flowroute.com/v2.2/messages";
+	ob_end_clean();  // cleaning Fusionpbx import outputs.
+	$url = "https://api.flowroute.com/v2.2/messages";
 	//Checking send 
 	if($_REQUEST["action"] === "send"){
 		// Setting up Options
-		$number = $_POST["number"];
-		$message = $_POST["message"];
-		$user_uuid = $_SESSION['user_uuid'];
+		$fromnumbername = $_POST["fromnumber"];
+		$tonumber = $_POST["tonumber"];
+		$message = $_POST["message"];		
+		//Getting the API Details from DB
+		$sql = "SELECT number_username,number_password,number_number FROM v_sms_numbers WHERE number_name = :numbername AND number_user = :user LIMIT 1";
+		$parameters['numbername'] = $fromnumbername;
+		$parameters['user'] = $user_uuid;
+		$database = new database;
+		$row = $database->select($sql, $parameters, 'all');
+		if(!$row){
+			echo json_encode([success=>false,message=>'Invalid From Number']);
+			exit;
+		}
+		$apiusername =trim($row[0]['number_username']);
+		$apipassword =trim($row[0]['number_password']);
+		$apinumber = trim($row[0]['number_number']);
+
+		
 		$now = date('Y-m-d H:i:s');
 		$MessageDataRow['message_uuid'] = uuid();
 		$MessageDataRow['message_domain'] = $domain_uuid;
 		$MessageDataRow['message_start_stamp'] = $now;
-		$MessageDataRow['message_from_number'] = $fromnumber;
-		$MessageDataRow['message_to_number'] = $number;
+		$MessageDataRow['message_from_number'] = $apinumber;
+		$MessageDataRow['message_to_number'] = $tonumber;
 		$MessageDataRow['message_text'] = $message;
 		$MessageDataRow['message_direction'] = "OUT";
 		$MessageDataRow['message_response'] = "";
 		$MessageDataRow['message_carrier'] = "Default";
 		$MessageDataRow['message_user'] = $user_uuid; 
-		if($username == null || $password == null || $fromnumber == null){
-			$data = [
-				success => false,
-				message => "API Credendials not configured. Kindly check options.",
-				data => [messid => $MessageDataRow['message_uuid']]
-			];
-			header('Content-type: application/json');
-			echo json_encode( $data );
-			$MessageDataRow['message_response'] = "API Credendials not configured. Kindly check options.";
-		}else{
+		
 			// $_SERVER['HTTP_HOST'] host
-			$dlr_callback = 'https://'.$_SERVER['HTTP_HOST'].'/app/smsportal/hook/notify.php?messid='.$MessageDataRow['message_uuid'];
-			// Sending Message
-			$data = array(
-				"data" => array (
-					"type" => "message",
-					"attributes" => array(
-						"to" => $number, // To Number
-						"from" => $fromnumber, // From number
-						"body" => $message, // Message Text
-						"dlr_callback" => $dlr_callback
-					)
+		$dlr_callback = 'https://'.$_SERVER['HTTP_HOST'].'/app/smsportal/hook/notify.php?messid='.$MessageDataRow['message_uuid'];
+		// Sending Message
+		$data = array(
+			"data" => array (
+				"type" => "message",
+				"attributes" => array(
+					"to" => $tonumber, // To Number
+					"from" => $apinumber, // From number
+					"body" => $message, // Message Text
+					"dlr_callback" => $dlr_callback
 				)
-			);
-
-			$dataJson = json_encode($data);
-			unset($data);
-			$ch = curl_init();
-			curl_setopt($ch,CURLOPT_URL, $url);
-			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-			curl_setopt( $ch, CURLOPT_POSTFIELDS, $dataJson );
-			curl_setopt( $ch, CURLOPT_HTTPHEADER, array('Content-Type:application/vnd.api+json')); // Content Type
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			$result = curl_exec($ch);
-			$Responce = json_decode($result);
-			$returnData = [];
-			$now = date('Y-m-d H:i:s');
-			if(isset($Responce->errors)){
-				// Set db perameters.
-				$MessageDataRow['message_response'] = $now.": Message Sent Error ".$Responce->errors[0]->detail;;
-				// Set responce perameters.
-				$returnData["success"] = false;
-				$returnData["message"] = "Message Sent Error. ".$Responce->errors[0]->detail;
-				$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
-				$returnData["error"] = [$Responce->errors[0]];
-				$returnData["success"] = false;				
-			}else if(isset($Responce->data)){
-				// Set db perameters.
-				$MessageDataRow['message_response'] = $now.": Message Sent Successfully id ".$Responce->data->id;
-				$MessageDataRow['message_sent'] = date('Y-m-d H:i:s');
-				// Set responce perameters.
-				$returnData["success"] = true;
-				$returnData["message"] = "Sent Successfully";
-				$returnData["data"] = [id=>$Responce->data->id,messid=>$MessageDataRow['message_uuid']];				
-			}else{
-			 	$returnData["success"] = false;
-			 	$returnData["message"] = "Some thing went wrong Please try again";
-			 	$returnData["error"] = $Responce;
-			 	$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
-			 }
-			header('Content-type: application/json');
-			echo json_encode( $returnData );
-			//Updating fields after API Call
-			// Saving details to db
+			)
+		);
+		$dataJson = json_encode($data);
+		//unset($data);
+		$ch = curl_init();
+		curl_setopt($ch,CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_USERPWD, $apiusername . ":" .$apipassword);
+		curl_setopt( $ch, CURLOPT_POSTFIELDS, $dataJson );
+		curl_setopt( $ch, CURLOPT_HTTPHEADER, array('Content-Type:application/vnd.api+json')); // Content Type
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		$result = curl_exec($ch);
+		$Responce = json_decode($result);
+		$returnData = [];
+		$now = date('Y-m-d H:i:s');
+		if(isset($Responce->errors)){
+			// Set db perameters.
+			//$MessageDataRow['message_response'] = $now.": Message Sent Error ".$Responce->errors[0]->detail;;
+			// Set responce perameters.
+			$returnData["success"] = false;
+			$returnData["message"] = "Message Sent Error. ".$Responce->errors[0]->detail;
+			$returnData["data"] = [messid=>$MessageDataRow['message_uuid'],d=>$data];
+			$returnData["error"] = [$Responce->errors[0]];
+			$returnData["success"] = false;				
+		}else if(isset($Responce->data)){
+			// Set db perameters.
+			$MessageDataRow['message_response'] = $now.": Message Sent Successfully id ".$Responce->data->id;
+			$MessageDataRow['message_sent'] = date('Y-m-d H:i:s');
+			// Set responce perameters.
+			$returnData["success"] = true;
+			$returnData["message"] = "Sent Successfully";
+			$returnData["data"] = [id=>$Responce->data->id,messid=>$MessageDataRow['message_uuid']];
 			$database = new database;
 			$database->app_name = "portal_sms_messages";
 			$database->table ="v_sms_messages";
 			$database->fields =$MessageDataRow;
-			$database->add();
-		}
+			$database->add();					
+		}else{
+		 	$returnData["success"] = false;
+		 	$returnData["message"] = "Some thing went wrong Please try again";
+		 	$returnData["error"] = $Responce;
+		 	$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
+		 }
+		header('Content-type: application/json');
+		echo json_encode( $returnData );
+		//Updating fields after API Call
+		// Saving details to db
+		
+		
 	}else if($_REQUEST["action"] === "resend"){ 
 		$messid = $_POST["messid"];
 		//get the message
@@ -220,68 +218,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		echo json_encode( $data );
 	}
 	exit;
-} else {
-require_once "resources/header.php";
-$document['title'] = $text['title-sms-send'];
-
-require_once "resources/paging.php";
-//Contemt
-
-echo '<h4 width="100%" border="0" cellpadding="0" cellspacing="0">' . $text['title-sms-send'] . '</h4>';
-//echo "		<form method='post' action='send.php'>";
-echo '			<div id="sms_pre" style="display:block">';
-echo '			<table width="100%" border="0" cellpadding="0" cellspacing="0">';
-echo '				<tbody>';
-echo '					<tr>';
-echo '						<td width="30%" class="vncellreq" valign="middle" align="left" nowrap="nowrap">';
-echo '							To Number';
-echo '						</td>';
-echo '						<td class="vtable" valign="top" align="left" nowrap="nowrap">';
-echo '							<input class="formfld w-100" type="text" id="tonumber" name="tonumber" required >';
-echo '						</td>';
-echo '					</tr>';
-echo '					<tr>';
-echo '						<td width="30%" class="vncellreq" valign="middle" align="left" nowrap="nowrap">';
-echo '							Message';
-echo '						</td>';
-echo '						<td class="vtable" valign="top" align="left" nowrap="nowrap">';
-echo '							<textarea class="formfld w-100" id="messagetext" name="messagetext" style="height:200px;" rows="30" value="" required></textarea>';
-echo '						</td>';
-echo '					</tr>';
-echo '					<tr>';
-echo '						<td width="30%" class="" valign="middle" align="left" nowrap="nowrap">';
-echo '					</td>';
-echo '					<td class="">';
-echo '						<input class="btn my-1" style="width:100px" id="back_btn" type="button" value="' . $text['button-back'] .'" onclick="location.replace('."'sms.php')".'">';
-echo '						<input class="btn my-1 ml-4" style="width:100px" id="preview_btn" type="button" value="' . $text['button-preview'] . '">';
-echo '					</td>';
-echo '					</tr></tbody></table></div>';
-
-// Preview
-echo '<div id="sms_post" style="display:none" class="col-md-6 mx-auto text-right">';
-echo '			<table id="sms_post_priview" class="table" border="0" cellpadding="0" cellspacing="0">';
-echo '				<thead>';
-echo '					<tr>';
-echo '						<th class="vtable" valign="top" align="left" nowrap="nowrap" style="width:30%">';
-echo '							Number';
-echo '						</th>';
-echo '						<th class="vtable text-center" valign="top" align="middle" nowrap="nowrap" style="width:auto">' ;
-echo '							Status';
-echo '						</th>';
-echo '						<th class="vtable text-center" valign="top" align="left" nowrap="nowrap" style="width:10%">';
-echo '							Action';
-echo '						</th>';
-echo '					</tr>';
-echo '				</thead>';
-echo '				<tbody>';
-echo '				</tbody>';
-echo '				</table>';
-echo '							<textarea class="formfld w-100" id="sms_post_priview_messagetext" name="messagetext" style="height:50px;max-height:auto;width:100%;max-width:100%" value="" required></textarea>';
-echo '							<input class="btn my-1" style="width:100px" id="back_btn" type="button" value="' . $text['button-back'] .'" onclick="location.replace('."'sms.php')".'">';
-echo '							<input class="btn my-1" style="width:100px" id="send_btn" type="button" value="' . $text['button-send'] . '">';
-echo '</div>';
-//echo "</form>";
 }
-//show the footer
-echo '<script type="text/javascript" src="resources/js/sms.js"></script>';
-require_once "resources/footer.php";
