@@ -110,7 +110,7 @@
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Timestamp of delivery notification by api";
 		$z++;
 
-// Second Schema
+		// Second Schema
 		$y++;
 		$apps[$x]['db'][$y]['table']['name'] = "v_sms_errors";
 		$apps[$x]['db'][$y]['table']['parent'] = "";
@@ -133,7 +133,7 @@
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Error Text";
 		$z++;
 
-// Third Schema
+		// Third Schema
 		$y++;
 		$apps[$x]['db'][$y]['table']['name'] = "v_sms_numbers";
 		$apps[$x]['db'][$y]['table']['parent'] = "";
@@ -187,4 +187,10 @@
 		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "If Number is active";
+		$z++;
+		$apps[$x]['db'][$y]['fields'][$z]['name'] = "number_default";
+		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "boolean";
+		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "If Number is default number for user.";
 ?>
