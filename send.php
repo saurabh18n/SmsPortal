@@ -24,8 +24,7 @@ $text = $language->get();
 $user_uuid = $_SESSION['user_uuid'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-	ob_end_clean();  // cleaning Fusionpbx import outputs.
-	$url = "https://api.flowroute.com/v2.2/messages";
+	ob_end_clean();  // cleaning Fusionpbx import outputs.	
 	//Checking send 
 	if($_REQUEST["action"] === "send"){
 		// Setting up Options
@@ -33,15 +32,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		$tonumber = $_POST["tonumber"];
 		$message = $_POST["message"];		
 		//Getting the API Details from DB
-		$sql = "SELECT number_username,number_password,number_number FROM v_sms_numbers WHERE number_name = :numbername AND number_user = :user LIMIT 1";
+		$sql = "SELECT number_username,number_password,number_number,number_provider FROM v_sms_numbers WHERE number_name = :numbername AND number_user = :user LIMIT 1";
+
+
 		$parameters['numbername'] = $fromnumbername;
 		$parameters['user'] = $user_uuid;
 		$database = new database;
 		$row = $database->select($sql, $parameters, 'all');
+
 		if(!$row){
 			echo json_encode([success=>false,message=>'Invalid From Number']);
 			exit;
 		}
+
 		$apiusername =trim($row[0]['number_username']);
 		$apipassword =trim($row[0]['number_password']);
 		$apinumber = trim($row[0]['number_number']);
@@ -58,68 +61,129 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		$MessageDataRow['message_response'] = "";
 		$MessageDataRow['message_carrier'] = "Default";
 		$MessageDataRow['message_user'] = $user_uuid; 
-		
-			// $_SERVER['HTTP_HOST'] host
-		$dlr_callback = 'https://'.$_SERVER['HTTP_HOST'].'/app/smsportal/hook/notify.php?messid='.$MessageDataRow['message_uuid'];
-		// Sending Message
-		$data = array(
-			"data" => array (
-				"type" => "message",
-				"attributes" => array(
+		switch (trim($row[0]['number_provider'])) {
+			case "FLOWROUTE":{
+				$url = "https://api.flowroute.com/v2.2/messages";
+				$dlr_callback = 'https://'.$_SERVER['HTTP_HOST'].'/app/smsportal/hook/flowroute/notify.php?messid='.$MessageDataRow['message_uuid'];
+				// Sending Message
+				$data = array(
+					"data" => array (
+						"type" => "message",
+						"attributes" => array(
+							"to" => $tonumber, // To Number
+							"from" => $apinumber, // From number
+							"body" => $message, // Message Text
+							"dlr_callback" => $dlr_callback
+						)
+					)
+				);
+				$dataJson = json_encode($data);
+				//unset($data);
+				$ch = curl_init();
+				curl_setopt($ch,CURLOPT_URL, $url);
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_USERPWD, $apiusername . ":" .$apipassword);
+				curl_setopt( $ch, CURLOPT_POSTFIELDS, $dataJson );
+				curl_setopt( $ch, CURLOPT_HTTPHEADER, array('Content-Type:application/vnd.api+json')); // Content Type
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				$result = curl_exec($ch);
+				$Responce = json_decode($result);
+				$returnData = [];
+				$now = date('Y-m-d H:i:s');
+				if(isset($Responce->errors)){
+					// Set db perameters.
+					//$MessageDataRow['message_response'] = $now.": Message Sent Error ".$Responce->errors[0]->detail;;
+					// Set responce perameters.
+					$returnData["success"] = false;
+					$returnData["message"] = "Message Sent Error. ".$Responce->errors[0]->detail;
+					$returnData["data"] = [messid=>$MessageDataRow['message_uuid'],d=>$data];
+					$returnData["error"] = [$Responce->errors[0]];
+					$returnData["success"] = false;
+					writeError(json_encode($Responce->errors));	
+				}else if(isset($Responce->data)){
+					// Set db perameters.
+					$MessageDataRow['message_response'] = $now.": Message Sent Successfully id ".$Responce->data->id;
+					$MessageDataRow['message_sent'] = date('Y-m-d H:i:s');
+					// Set responce perameters.
+					$returnData["success"] = true;
+					$returnData["message"] = "Sent Successfully";
+					$returnData["data"] = [id=>$Responce->data->id,messid=>$MessageDataRow['message_uuid']];
+					$database = new database;
+					$database->app_name = "portal_sms_messages";
+					$database->table ="v_sms_messages";
+					$database->fields =$MessageDataRow;
+					$database->add();					
+				}else{
+					$returnData["success"] = false;
+					$returnData["message"] = "Some thing went wrong Please try again";
+					$returnData["error"] = $Responce;
+					$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
+				}
+				header('Content-type: application/json');
+				echo json_encode( $returnData );
+
+
+				break;
+			}
+			case "TELNYX":{
+				$url = "https://api.telnyx.com/v2/messages";
+				$dlr_callback = 'https://'.$_SERVER['HTTP_HOST'].'/app/smsportal/hook/telnyx/notify.php?messid='.$MessageDataRow['message_uuid'];
+				// Sending Message
+				$data = array(
+					"auto_detect"=> true,
 					"to" => $tonumber, // To Number
 					"from" => $apinumber, // From number
-					"body" => $message, // Message Text
-					"dlr_callback" => $dlr_callback
-				)
-			)
-		);
-		$dataJson = json_encode($data);
-		//unset($data);
-		$ch = curl_init();
-		curl_setopt($ch,CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_USERPWD, $apiusername . ":" .$apipassword);
-		curl_setopt( $ch, CURLOPT_POSTFIELDS, $dataJson );
-		curl_setopt( $ch, CURLOPT_HTTPHEADER, array('Content-Type:application/vnd.api+json')); // Content Type
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$result = curl_exec($ch);
-		$Responce = json_decode($result);
-		$returnData = [];
-		$now = date('Y-m-d H:i:s');
-		if(isset($Responce->errors)){
-			// Set db perameters.
-			//$MessageDataRow['message_response'] = $now.": Message Sent Error ".$Responce->errors[0]->detail;;
-			// Set responce perameters.
-			$returnData["success"] = false;
-			$returnData["message"] = "Message Sent Error. ".$Responce->errors[0]->detail;
-			$returnData["data"] = [messid=>$MessageDataRow['message_uuid'],d=>$data];
-			$returnData["error"] = [$Responce->errors[0]];
-			$returnData["success"] = false;				
-		}else if(isset($Responce->data)){
-			// Set db perameters.
-			$MessageDataRow['message_response'] = $now.": Message Sent Successfully id ".$Responce->data->id;
-			$MessageDataRow['message_sent'] = date('Y-m-d H:i:s');
-			// Set responce perameters.
-			$returnData["success"] = true;
-			$returnData["message"] = "Sent Successfully";
-			$returnData["data"] = [id=>$Responce->data->id,messid=>$MessageDataRow['message_uuid']];
-			$database = new database;
-			$database->app_name = "portal_sms_messages";
-			$database->table ="v_sms_messages";
-			$database->fields =$MessageDataRow;
-			$database->add();					
-		}else{
-		 	$returnData["success"] = false;
-		 	$returnData["message"] = "Some thing went wrong Please try again";
-		 	$returnData["error"] = $Responce;
-		 	$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
-		 }
-		header('Content-type: application/json');
-		echo json_encode( $returnData );
-		//Updating fields after API Call
-		// Saving details to db
-		
-		
+					"text" => $message, // Message Text
+					"webhook_url" => $dlr_callback
+					
+				);
+				$dataJson = json_encode($data);
+				//unset($data);
+				$ch = curl_init();
+				curl_setopt($ch,CURLOPT_URL, $url);
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt( $ch, CURLOPT_POSTFIELDS, $dataJson );
+				$authorization = "Authorization: Bearer ".$apipassword;
+				curl_setopt( $ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json',$authorization)); // Content Type
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+				$result = curl_exec($ch);
+				$Responce = json_decode($result);
+				$returnData = [];
+				$now = date('Y-m-d H:i:s');
+				if(isset($Responce->errors)){
+					// Set db perameters.
+					//$MessageDataRow['message_response'] = $now.": Message Sent Error ".$Responce->errors[0]->detail;;
+					// Set responce perameters.
+					$returnData["success"] = false;
+					$returnData["message"] = "Message Sent Error. ".$Responce->errors[0]->detail;
+					$returnData["data"] = [messid=>$MessageDataRow['message_uuid'],d=>$data];
+					$returnData["error"] = [$Responce->errors[0]];
+					$returnData["success"] = false;				
+				}else if(isset($Responce->data)){
+					// Set db perameters.
+					$MessageDataRow['message_response'] = $now.": Message Sent Successfully id ".$Responce->data->id;
+					$MessageDataRow['message_sent'] = date('Y-m-d H:i:s');
+					// Set responce perameters.
+					$returnData["success"] = true;
+					$returnData["message"] = "Sent Successfully";
+					$returnData["data"] = [id=>$Responce->data->id,messid=>$MessageDataRow['message_uuid']];
+					$database = new database;
+					$database->app_name = "portal_sms_messages";
+					$database->table ="v_sms_messages";
+					$database->fields =$MessageDataRow;
+					$database->add();					
+				}else{
+					$returnData["success"] = false;
+					$returnData["message"] = "Some thing went wrong Please try again";
+					$returnData["error"] = $Responce;
+					$returnData["data"] = [messid=>$MessageDataRow['message_uuid']];
+				}
+				header('Content-type: application/json');
+				echo json_encode( $returnData );
+				break;
+			}
+		}	
 	}else if($_REQUEST["action"] === "resend"){ 
 		$messid = $_POST["messid"];
 		//get the message
@@ -218,4 +282,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		echo json_encode( $data );
 	}
 	exit;
+}
+
+function writeError($text){
+    $ErrorRow['error_uuid'] = uuid();
+	$ErrorRow['error_time'] = date('Y-m-d H:i:s');
+	$ErrorRow['error_text'] = $text;
+    $database = new database;
+	$database->app_name = "portal_sms_messages";
+	$database->table ="v_sms_errors";
+	$database->fields =$ErrorRow;
+	$database->add();
 }

@@ -110,7 +110,7 @@
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Timestamp of delivery notification by api";
 		$z++;
 
-		// Second Schema
+// Second Schema
 		$y++;
 		$apps[$x]['db'][$y]['table']['name'] = "v_sms_errors";
 		$apps[$x]['db'][$y]['table']['parent'] = "";
@@ -133,18 +133,27 @@
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Error Text";
 		$z++;
 
-		// Third Schema
+// Third Schema
 		$y++;
 		$apps[$x]['db'][$y]['table']['name'] = "v_sms_numbers";
 		$apps[$x]['db'][$y]['table']['parent'] = "";
-
 		$z=0;
+
+
+
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "number_uuid";
 		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "uuid";
 		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "char(36)";
 		$apps[$x]['db'][$y]['fields'][$z]['key']['type'] = "primary";
 		$z++;
+
+		$apps[$x]['db'][$y]['fields'][$z]['name'] = "number_provider";
+		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
+		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Provider Flowroute or telnyx";
+		$z++;
+
+
 		$apps[$x]['db'][$y]['fields'][$z]['name'] = "number_name";
 		$apps[$x]['db'][$y]['fields'][$z]['type'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "Name for number";
@@ -187,10 +196,4 @@
 		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "text";
 		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "If Number is active";
-		$z++;
-		$apps[$x]['db'][$y]['fields'][$z]['name'] = "number_default";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['pgsql'] = "boolean";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['sqlite'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['type']['mysql'] = "text";
-		$apps[$x]['db'][$y]['fields'][$z]['description']['en-us'] = "If Number is default number for user.";
 ?>

@@ -17,7 +17,6 @@ if (permission_exists('sms_view')) {
 }
 
 $user_uuid = $_SESSION['user_uuid'];
-
 //Post Action Handlers
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -87,7 +86,7 @@ require_once "resources/header.php";
 $document['title'] = $text['title-sms'];
 
 //Navigaion
-echo '<link rel="stylesheet" href="resources/css/navigation.css">';
+echo '<link rel="stylesheet" href="static/css/navigation.css">';
 
 echo '<div class="wrapper">
         <!-- Sidebar  -->
@@ -116,10 +115,10 @@ echo '<div class="wrapper">
 				<select id="refreshtime" class="form-control my-2" >
 					<option value="1000">1 Sec</option>
 					<option value="2000">2 Sec</option>
-					<option value="3000">3 Sec</option>
-					<option value="4000" >4 Sec</option>
+					<option value="3000" selected>3 Sec</option>
+					<option value="4000">4 Sec</option>
 					<option value="5000">5 Sec</option>
-					<option value="OFF" selected>OFF</option>
+					<option value="OFF">OFF</option>
 				</select>
 			</div>
         </nav>
@@ -150,7 +149,7 @@ $numbers = $database->select($sql, $parameters, 'all');
 unset($sql,$parameters);
 
 // The New Implementation
-echo '<link rel="stylesheet" href="resources/css/inbox.css?<?php echo rand(10,1000)?>">
+echo '<link rel="stylesheet" href="static/css/inbox.css?<?php echo rand(10,1000)?>">
 <div class="row m-0 p-0">
 		<div class="card w-100">
 			<div class="row g-0">
@@ -159,7 +158,6 @@ echo '<link rel="stylesheet" href="resources/css/inbox.css?<?php echo rand(10,10
 						<div class="d-flex align-items-center">
 							<div class="flex-grow-1">
 								<input id="searchip" type="text" class="form-control my-3" placeholder="Search or enter number to send message">
-								
 							</div>
 							<div>
 								<button id="newnumberbtn" class="btn btn-block btn-primary p-1">
@@ -169,24 +167,26 @@ echo '<link rel="stylesheet" href="resources/css/inbox.css?<?php echo rand(10,10
 							</div>
 						</div>
 					</div>
-					<div id="contact-list">';
-						foreach ($number_list as  $index=>$number) {
-							if($index== 0){
-								$firstNumber = $number['number'];
+					<div id="contact-list-container">
+						<div id="contact-list">';
+							foreach ($number_list as  $index=>$number) {
+								if($index== 0){
+									$firstNumber = $number['number'];
+								}
+								echo '<div class="number-list-item list-group-item border-0 my-1 pl-2 '.($index==0?'active':'').'" data-number="'.$number['number'].'">
+										<div class="d-flex flex-column align-items-start" style="pointer-events: none;">
+											<div class="d-flex flex-row w-100 justify-content-between" style="pointer-events: none;">
+												<span class="list-number">'.$number['number'].'</span>
+												<span class="badge badge-pill badge-danger pill-text"></span>											
+											</div>
+											<div class="d-flex flex-row w-100 justify-content-between" style="pointer-events: none;">							
+												<span class="list-text">'.substr($number['message'], 0, 50).'</span>
+												<span class="list-time my-auto">'.$number['mtime'].'</span>
+											</div>															
+										</div></div>';
 							}
-							echo '<div class="number-list-item list-group-item border-0 my-1 pl-2 '.($index==0?'active':'').'" data-number="'.$number['number'].'">
-									<div class="d-flex flex-column align-items-start" style="pointer-events: none;">
-										<div class="d-flex flex-row w-100 justify-content-between" style="pointer-events: none;">
-											<span class="list-number">'.$number['number'].'</span>
-											<span class="badge badge-pill badge-danger pill-text"></span>											
-										</div>
-										<div class="d-flex flex-row w-100 justify-content-between" style="pointer-events: none;">							
-											<span class="list-text">'.substr($number['message'], 0, 50).'</span>
-											<span class="list-time my-auto">'.$number['mtime'].'</span>
-										</div>															
-									</div></div>';
-						}
-echo '					</div>
+	echo '				</div>
+					</div>
 					<!-- <hr class="d-block d-lg-none mt-1 mb-0"> -->
 				</div>
 				<div class="col-12 col-lg-6 col-xl-8">
@@ -234,7 +234,7 @@ echo '						</select>
 </div>
 </div>';
 require_once "resources/footer.php";
-echo '<script type="text/javascript" src="resources/js/inbox.js?v='.rand(111,999).'"></script>';
+echo '<script type="text/javascript" src="static/js/inbox.js?v='.rand(111,999).'"></script>';
 
 function formatStatus($str){
 	$texts = (explode("\n",$str));

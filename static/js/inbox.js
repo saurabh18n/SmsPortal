@@ -62,7 +62,13 @@ $('#load-more').on('click', () => {
             response = JSON.parse(response)
             if (response.success) {
                 //Setting flag for no more messages
-                if (response.data.length < 20) { number.more = false; }
+                if (response.data.length < 20) {
+                    number.more = false;
+                    number.offset += response.data.length;
+                } else {
+                    number.offset += 20;
+                }
+
                 //add messages to number
                 response.data.forEach(m => {
                     let message = {

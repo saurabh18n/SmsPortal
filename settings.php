@@ -27,14 +27,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	switch ($_REQUEST["action"]) {
 		case "add":{
 			$number_name = $_POST["number_name"];
+			$api_provider = $_POST["api_provider"];
 			$api_user = $_POST["api_user_name"];
 			$api_pass = $_POST["api_user_pass"];
-			$api_number = $_POST["api_user_number"];			
+			$api_number = $_POST["api_user_number"];
+
 			if(isset($api_user,$api_pass,$api_number,$number_name) && $api_user != "" && $api_pass != "" && $api_number != "" && $number_name != ""){
 				$number['number_uuid'] = uuid();
 				$number['number_domain'] = $domain_uuid;
 				$number['number_user'] = $user_uuid;
 				$number['number_name'] = $number_name;
+				$number['number_provider'] = $api_provider;
 				$number['number_username'] = $api_user;
 				$number['number_password'] = $api_pass;
 				$number['number_number'] = $api_number;
@@ -50,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			}
 			break;
 		}
-		case "update":
+		case "update":{
 			unset($parameters,$sql,$database);
 			$uuid = $_POST["hid-uuid"];
 			$number_name = $_POST["number_name"];
@@ -70,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 				echo "invalid data";
 				exit;
 			}			
-			break;
+			break;}
 		case "enable":{
 			$uuid = $_POST["hid-uuid"];			
 			if(isset($uuid) && $uuid != ""){
@@ -82,8 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 				echo "invalid data";
 				exit;
 			}	
-		}
 			break;
+		}
+			
 		case "disable":{
 			$uuid = $_POST["hid-uuid"];			
 			if(isset($uuid) && $uuid != ""){
@@ -95,9 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 				echo "invalid data";
 				exit;
 			}
+			break;
 		}
 
-			break;
+			
 
 		case "default":{
 			$numuuid = $_POST["hid-uuid"];
@@ -135,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 //Show Get Content
-echo '<link rel="stylesheet" href="resources/css/navigation.css">';
+echo '<link rel="stylesheet" href="static/css/navigation.css">';
 echo '<div class="wrapper">
         <!-- Sidebar  -->
         <nav id="sidebar">
@@ -166,6 +171,7 @@ echo '<div class="wrapper">
 							<tr>
 								<th class="d-none">numberid</th>
 								<th class="">Name</th>
+								<th class="">Provider</th>
 								<th class="">Number</th>
 								<th class="text-center">Edit</th>
 								<th class="text-center">Active</th>
@@ -182,6 +188,7 @@ echo '<div class="wrapper">
 		foreach ($number_list as $number) {
 			echo '<tr><td class="d-none">'.$number['number_uuid'].'</td>';
 			echo '<td>'.$number['number_name'].'</td>';
+			echo '<td>'.$number['number_provider'].'</td>';
 			echo '<td>'.$number['number_number'].'</td>';
 			echo '<td class="text-center"><button data-uuid="'.$number['number_uuid'].'" data-name="'.$number['number_name'].'" data-number="'.$number['number_number'].'" class="btn btn-sm btn-primary number-edit-btn" type="button">Edit</button></td>';
 
@@ -215,15 +222,22 @@ echo 					'</tbody>
 				<form id="add-form" method="post" action="settings.php?action=add">
 					<input type="hidden" value="" name="hid-uuid" id="hid-uuid"/>
 					<div class="form-group">
+						<label for="api_provider">Provider</label>
+						<select class="form-control form-select" id="api_provider" name="api_provider" >
+							<option selected value="FLOWROUTE">Flowroute</option>
+							<option value="TELNYX">Telnyx</option>
+						</select>					
+					</div>
+					<div class="form-group">
 						<label for="api_user_name">Number Name</label>
 						<input type="text" class="form-control" id="number_name" name="number_name" autocomplete="off">						
 					</div>
 					<div class="form-group">
-						<label for="api_user_name">API Username</label>
+						<label for="api_user_name">API Username Or API Key</label>
 						<input type="text" class="form-control" id="api_user_name" name="api_user_name" autocomplete="off">						
 					</div>
 					<div class="form-group">
-						<label for="api_user_pass">API Password</label>
+						<label for="api_user_pass">API Password OR API Key</label>
 						<input type="text" class="form-control" id="api_user_pass" name="api_user_pass" autocomplete="off">						
 					</div>
 
@@ -239,4 +253,4 @@ echo 					'</tbody>
 </div></div>';
 
 require_once "resources/footer.php";
-echo '<script type="text/javascript" src="resources/js/settings.js"></script>';
+echo '<script type="text/javascript" src="static/js/settings.js"></script>';

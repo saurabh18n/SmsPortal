@@ -1,5 +1,5 @@
 <?php
-include "../root.php";
+include "../../root.php";
 require_once "resources/require.php";
 
 date_default_timezone_set('Asia/Kolkata');
