@@ -1,10 +1,12 @@
 var Numbers = new Map();
+//Numbers.set($(num).data('number'), { messages: new Map(), offset: 0, till: new Date(), more: true, recentLastMessage:Date });
 var lastFetched = '2021-01-01'
 var activeNumber = $('.number-list-item:nth-child(1)').data('number');
 var refreshTimer;
 
 //Number Click
 $('.number-list-item').on('click', handleActiveNumberChange);
+
 function handleActiveNumberChange(event) {
     $('.number-list-item').removeClass('active');
     $(event.target).addClass('active');
@@ -33,7 +35,7 @@ $('#searchip').on("keyup", (event) => {
     $(".number-list-item[data-number]:contains(" + event.target.value + ")").removeClass('d-none');
 });
 
-//Refresh Change
+//Refresh timer Change
 $('#refreshtime').on('change', () => {
     if ($('#refreshtime').val() == 'OFF') {
         clearInterval(refreshTimer);
@@ -44,7 +46,6 @@ $('#refreshtime').on('change', () => {
 })
 
 //loadmore click
-
 $('#load-more').on('click', () => {
     let number = Numbers.get(activeNumber);
     var fData = new FormData();
@@ -96,9 +97,6 @@ $('#load-more').on('click', () => {
     sortMessage(activeNumber);
     populateMessages(activeNumber);
 });
-
-
-//New Message
 
 $('#newnumberbtn').on('click', () => {
     if ($('#contact-list>div.number-list-item:not(.d-none)').length == 0) {
@@ -166,12 +164,19 @@ async function getAllMessages() {
                         message_delivered: m.message_delivered,
                     };
                     if (Numbers.has(partyNumber)) {
-                        Numbers.get(partyNumber).messages.set(m.message_uuid, message)
+                        Numbers.get(partyNumber).messages.set(m.message_uuid, message);
                     } else {
                         addNewNumberToList(partyNumber, m.message_start_stamp, m.message_text)
                         let messages = new Map();
                         messages.set(m.message_uuid, message)
-                        Numbers.set(partyNumber, { messages: messages, offset: 0, till: new Date(), more: true })
+                        Numbers.set(partyNumber, { messages: messages, offset: 0, till: new Date(), recentLastMessage: message.message_start_stamp, more: true })
+                    }
+
+                    //Updating recent message time
+                    if (Numbers.get(partyNumber).recentLastMessage < message.message_start_stamp) {
+                        const tempObj = Numbers.get(partyNumber)
+                        tempObj.recentLastMessage = message.message_start_stamp;
+                        Numbers.set(partyNumber, tempObj)
                     }
 
                     if (partyNumber != activeNumber) {
@@ -186,20 +191,41 @@ async function getAllMessages() {
             } else {
                 console.log(response)
             }
+            //Update last message value of number
+            $('.number-list-item').each((ind, num) => {
+                let number = $(num).data('number');
+                const last = Numbers.get(number).recentLastMessage;
+                $(num).data('last', last.getTime());
+                $(num).find('.list-time').text(convertDate(last))
+            });
+
+
+            //sort numbers basic of recentLastMessage
+
+            let parent = $('#contact-list');
+            let childrens = parent.children("div.number-list-item");
+            childrens.sort((a, b) => {
+                return $(b).data('last') - $(a).data('last');
+            });
+            parent.append(childrens);
+
+
+
+            //Sort Message for each number
             [...Numbers.keys()].forEach(num => { sortMessage(num) });
+            //Repopulate message for active number
             populateMessages(activeNumber);
         },
         error: function (response) {
             console.log("Error", response.message);
         }
     });
-    let now = new Date();
-    lastFetched = now.toISOString()
-
+    lastFetched = (new Date()).toISOString()
 };
 
 function populateMessages(number) {
     $('#messages>div.chat-message').remove();
+    if (!Numbers.has(number)) return;
     Numbers.get(number).messages.forEach(mes => {
         let senttime = convertDate(mes.message_start_stamp);
         $('#messages').append(`<div class="chat-message chat-message-${mes.message_direction == "OUT" ? "right" : 'left'} pb-4" data-muuid="${mes.message_uuid}" data-timestamp="${mes.message_start_stamp}">
@@ -253,10 +279,10 @@ function addNewNumberToList(number, lastmessage, text) {
 //Initialization
 //add prefetched numbers to numbers
 $('.number-list-item').each((ind, num) => {
-    Numbers.set($(num).data('number'), { messages: new Map(), offset: 0, till: new Date(), more: true });
+    Numbers.set($(num).data('number'), { messages: new Map(), offset: 0, till: new Date(), more: true, recentLastMessage: new Date(0) });
 })
 
-
+//Initial Message call
 getAllMessages();
 
 if ($('#refreshtime').val() != 'OFF') refreshTimer = setInterval(getAllMessages, $('#refreshtime').val());
